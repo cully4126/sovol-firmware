@@ -1,0 +1,45 @@
+name: Build Marlin CI
+
+on:
+  push:
+    branches: [ sv06-skr-e3v3-marlin ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout this repo
+      uses: actions/checkout@v4
+
+    - name: Checkout Marlin source
+      uses: actions/checkout@v4
+      with:
+        repository: MarlinFirmware/Marlin
+        ref: bugfix-2.1.x
+        path: marlin-src
+
+    - name: Copy configs into Marlin
+      run: |
+        mkdir -p marlin-src/Marlin
+        cp -v Marlin/Configuration.h marlin-src/Marlin/Configuration.h
+        cp -v Marlin/Configuration_adv.h marlin-src/Marlin/Configuration_adv.h
+
+    - name: Set up Python & PlatformIO
+      run: |
+        python3 -m pip install --user -U pip
+        python3 -m pip install --user platformio
+        export PATH="$HOME/.local/bin:$PATH"
+        pio --version
+
+    - name: Build Marlin for SKR E3 V3 (STM32F103)
+      run: |
+        export PATH="$HOME/.local/bin:$PATH"
+        pio run -d marlin-src -e STM32F103RC_btt_SKR_E3_V3
+
+    - name: Upload firmware artifact
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware-bin
+        path: marlin-src/.pio/build/STM32F103RC_btt_SKR_E3_V3/firmware.bin
